@@ -7,6 +7,7 @@ import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.pipeline import Pipeline
 from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.tree import DecisionTreeRegressor
 from sklearn.linear_model import Lasso
 from sklearn.dummy import DummyRegressor
 
@@ -292,6 +293,32 @@ def make_regressors(subset=None):
     pipe = set_grid(pipe, finmodel=result)
 
     return pipe
+
+
+def grid_regressors(subset=None):
+    available_regressors = {
+        'gbrt': set_grid(
+            GradientBoostingRegressor(),
+            n_estimators=[2 ** i for i in range(1, 11)],
+            learning_rate=[0.1, 0.01, 0.001],
+        ),
+        'lasso': set_grid(
+            Lasso(),
+            alpha=np.exp(np.linspace(-8, 8)),
+        ),
+        'tree': set_grid(
+            DecisionTreeRegressor(),
+            max_depth=list(range(1, 32)),
+            min_samples_split=np.logspace(-6.0, 0.0, 20)
+        )
+    }
+
+    if subset is None:
+        subset = list(available_regressors.keys())
+
+    result = [available_regressors[k] for k in subset]
+
+    return result
 
 
 def make_dummy_regressor(subset=None):
