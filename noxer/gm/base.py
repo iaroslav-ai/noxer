@@ -5,7 +5,7 @@ models, such as a score function.
 
 from sklearn.base import BaseEstimator, TransformerMixin
 from noxer.sequences import FlattenShape
-from .metrics import distribution_similarity
+from .metrics import condidional_similarity
 from sklearn.preprocessing import StandardScaler
 
 
@@ -51,5 +51,5 @@ class GeneratorBase(BaseEstimator):
             The data used to condition the generative model's outputs.
         """
         Yp = self.predict(X, **kwargs)
-        score = distribution_similarity(Y, Yp)
+        score = condidional_similarity(Y, Yp, C_true=X, C_pred=X, cross_testing=True)
         return score
