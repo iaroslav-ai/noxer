@@ -4,11 +4,13 @@ for machine learning and beyond.
 """
 import numpy as np
 
-from sklearn.base import BaseEstimator
+from sklearn.base import BaseEstimator, clone
 from sklearn.pipeline import Pipeline
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.linear_model import Lasso
+from sklearn.svm import SVR
+from sklearn.tree import DecisionTreeRegressor
 from sklearn.dummy import DummyRegressor
 
 from searchgrid import set_grid
@@ -296,20 +298,41 @@ def make_regressors(subset=None):
 
 
 def grid_regressors(subset=None):
+    """Create a number of regressors with corresponding
+    parameter ranges that will be iterated over with
+    GridSearchCV.
+
+    Parameters
+    ----------
+    subset : array - like or None
+        Subset of models to use for grid search.
+
+    Returns
+    -------
+    regressors : list
+        List of regressors with attached grids.
+    """
+
     available_regressors = {
         'gbrt': set_grid(
             GradientBoostingRegressor(),
             n_estimators=[2 ** i for i in range(1, 11)],
-            learning_rate=[0.1, 0.01, 0.001],
+            learning_rate=[0.1, 0.01, 0.001]
+        ),
+        'svr': set_grid(
+            SVR(),
+            C=np.logspace(-5, 5, 20),
+            epsilon=[0.1, 0.01, 0.001],
+            gamma=np.logspace(-5, 5, 20)
+        ),
+        'tree': set_grid(
+            DecisionTreeRegressor(),
+            min_samples_split=np.logspace(-5, 0, 20),
+            max_depth=list(range(1, 20)),
         ),
         'lasso': set_grid(
             Lasso(),
             alpha=np.exp(np.linspace(-8, 8)),
-        ),
-        'tree': set_grid(
-            DecisionTreeRegressor(),
-            max_depth=list(range(1, 32)),
-            min_samples_split=np.logspace(-6.0, 0.0, 20)
         )
     }
 
