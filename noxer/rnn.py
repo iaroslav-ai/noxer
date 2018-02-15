@@ -242,7 +242,11 @@ class DNNClassifier(KerasClassifierBase):
         from keras.layers.advanced_activations import LeakyReLU
         ip = Input(shape=X[0].shape)
         x = ip
-        x = Flatten()(x)
+
+        # flatten if necessary the input shape
+        if len(X.shape) > 2:
+            x = Flatten()(x)
+
         for i in range(self.n_layers):
             x = Dense(self.n_neurons)(x)
             x = LeakyReLU(0.05)(x)

@@ -11,7 +11,7 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.linear_model import Lasso
 from sklearn.svm import SVR
 from sklearn.tree import DecisionTreeRegressor
-from sklearn.dummy import DummyRegressor
+from sklearn.dummy import DummyRegressor, DummyClassifier
 
 from searchgrid import set_grid
 
@@ -363,3 +363,48 @@ def make_dummy_regressor(subset=None):
     pipe = set_grid(pipe, model=result)
 
     return pipe
+
+
+class DummyClassifierNx(DummyClassifier):
+    def __init__(self, strategy="stratified", random_state=None,
+                 constant=None):
+        super(DummyClassifierNx, self).__init__(
+            strategy=strategy, random_state=random_state, constant=constant
+        )
+
+    def _X(self, X):
+        return np.zeros((len(X), 1))
+
+    def fit(self, X, y, sample_weight=None):
+        X = self._X(X)
+        return super(DummyClassifierNx, self).fit(X, y, sample_weight=sample_weight)
+
+    def predict(self, X):
+        X = self._X(X)
+        return super(DummyClassifierNx, self).predict(X)
+
+    def score(self, X, y, sample_weight=None):
+        X = self._X(X)
+        return super(DummyClassifierNx, self).score(X, y, sample_weight=sample_weight)
+
+
+class DummyRegressorNx(DummyRegressor):
+    def __init__(self, strategy="mean", constant=None, quantile=None):
+        super(DummyRegressor, self).__init__(
+            strategy=strategy, quantile=quantile, constant=constant
+        )
+
+    def _X(self, X):
+        return np.zeros((len(X), 1))
+
+    def fit(self, X, y, sample_weight=None):
+        X = self._X(X)
+        return super(DummyRegressorNx, self).fit(X, y, sample_weight=sample_weight)
+
+    def predict(self, X):
+        X = self._X(X)
+        return super(DummyRegressorNx, self).predict(X)
+
+    def score(self, X, y, sample_weight=None):
+        X = self._X(X)
+        return super(DummyRegressorNx, self).score(X, y, sample_weight=sample_weight)

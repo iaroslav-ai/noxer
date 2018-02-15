@@ -11,6 +11,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.metrics import accuracy_score
 from sklearn.svm import LinearSVC
+from noxer.base import AugmentMixin
 
 # A set of procedures for preprocessing of sequences
 
@@ -106,11 +107,22 @@ class PadSubsequence(BaseEstimator, TransformerMixin):
 
 class CalculateSpectrum(BaseEstimator, TransformerMixin):
     """Calculates spectrum of sequence.
+
+    Parameters
+    ----------
+    max_spectrum : int, default=-1
+        Maximum frequency to consider.
+
+    axis: int, default=-2
+        Axis along which to calculate fft.
+        axis=-2: calculate fft of sequence elements along features.
+        axis=-1: calculate fft of each feature vector in sequence.
     """
 
-    def __init__(self, copy=True, with_mean=True, with_std=True):
-        self.with_mean = with_mean
-        self.with_std = with_std
+    def __init__(self, max_spectrum=-1, axis=-2, fnc='rfft'):
+        self.max_spectrum = max_spectrum
+        self.fnc = fnc
+        self.axis = axis
 
     def fit(self, X, y=None):
         return self
@@ -124,7 +136,13 @@ class CalculateSpectrum(BaseEstimator, TransformerMixin):
             The data used to fft along the features axis.
         """
         from scipy import fftpack
-        X = abs(fftpack.fft(X, axis=1))
+        fnc = self.fnc
+
+        if isinstance(fnc, str):
+            fnc = getattr(fftpack, fnc)
+
+        X = abs(fnc(X, axis=self.axis))
+        X = X[:, :, :self.max_spectrum]
         return X
 
 
@@ -228,7 +246,7 @@ class Seq1Dto2D(BaseEstimator, TransformerMixin):
         return [np.array(list(xx))[:, np.newaxis] for xx in X]
 
 
-class Subsequensor(BaseEstimator, TransformerMixin):
+class Subsequensor(BaseEstimator, AugmentMixin):
     """
     Creates views in all subsequences of a numpy sequence.
 
@@ -239,11 +257,16 @@ class Subsequensor(BaseEstimator, TransformerMixin):
     max_subsequence: int or None, maximum subsequence size that is used
         in order to predict a certain output value.
 
+    concat_transform:
+        Whether to return array of array of sequences or just
+        a single array with all subsequences.
+
     """
 
-    def __init__(self, step, max_subsequence=None):
+    def __init__(self, step, max_subsequence=None, concat_transform=False):
         self.step = step
         self.max_subsequence = max_subsequence
+        self.concat_transform = concat_transform
 
     def fit(self, X, Y):
         """Fit the transformer according to the given training data.
@@ -293,7 +316,13 @@ class Subsequensor(BaseEstimator, TransformerMixin):
         X = [z[0] for z in XY]
         if test_time:
             return X
-        return X, [z[1] for z in XY]
+        Xr, Yr = X, [z[1] for z in XY]
+
+        if self.concat_transform:
+            Xr = sum(Xr, [])
+            Yr = sum(Yr, [])
+
+        return Xr, Yr
 
 
 class SequenceEstimator(BaseEstimator):
