@@ -240,7 +240,7 @@ class DNNClassifier(KerasClassifierBase):
         import keras.models
         from keras.layers import Input, Dense, Flatten
         from keras.layers.advanced_activations import LeakyReLU
-        ip = Input(shape=X[0].shape)
+        ip = Input(shape=X[0].shape, name='Input_1')
         x = ip
 
         # flatten if necessary the input shape
@@ -250,7 +250,7 @@ class DNNClassifier(KerasClassifierBase):
         for i in range(self.n_layers):
             x = Dense(self.n_neurons)(x)
             x = LeakyReLU(0.05)(x)
-        x = Dense(n_classes, activation='softmax')(x)
+        x = Dense(n_classes, activation='softmax', name='Output_1')(x)
         model = keras.models.Model(inputs=ip, outputs=x)
         return model
 
@@ -269,7 +269,7 @@ class KerasRegressorBase(KerasNNBase, RegressorMixin):
         self.encoder = FunctionTransformer(func=lambda x: x, inverse_func=lambda x: x)
 
         try:
-            model = self.create_architecture
+            model = self.create_architecture(X)
         except BaseException as ex:
             ip = Input(shape=X[0].shape)
             x = ip
@@ -329,6 +329,9 @@ class DNNRegressor(KerasRegressorBase):
         from keras.layers.advanced_activations import LeakyReLU
         ip = Input(shape=X[0].shape)
         x = ip
+        # flatten if necessary the input shape
+        if len(X.shape) > 2:
+            x = Flatten()(x)
         for i in range(self.n_layers):
             x = Dense(self.n_neurons)(x)
             x = LeakyReLU(0.05)(x)
