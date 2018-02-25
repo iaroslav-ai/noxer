@@ -5,6 +5,27 @@ A set of abstract classes defining interfaces.
 class AugmentMixin(object):
     """Mixin class for augmentation of data in noxer."""
 
+    def fit(self, X, Y, **fit_params):
+        """Fit to the data, base method.
+
+        Fits transformer to X and Y with optional parameters fit_params
+        and returns self.
+
+        Parameters
+        ----------
+        X : array of shape [n_samples, ...]
+            Training set.
+
+        Y : array of shape [n_samples, ...]
+            Target values.
+
+        Returns
+        -------
+        self
+
+        """
+        return self
+
     def fit_transform(self, X, Y, **fit_params):
         """Fit to data, then transform it.
 
