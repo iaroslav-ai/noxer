@@ -84,6 +84,8 @@ class PadSubsequence(BaseEstimator, TransformerMixin):
 
     def fit(self,X,y=None):
         # remeber the num. of features
+        if not isinstance(X[0], np.ndarray):
+            raise ValueError("Please provide sequences as np.ndarray")
         self.n_features = X[0].shape[-1]
         return self
 
