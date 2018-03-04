@@ -161,7 +161,7 @@ class FolderDatasetReader():
                 result = json.load(f)
             return info, result
 
-    def read(self, n=128, partition="train"):
+    def read(self, n=-1, partition="train"):
         """
         Reads part of the dataset.
 

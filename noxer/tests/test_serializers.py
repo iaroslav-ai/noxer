@@ -19,7 +19,7 @@ class TestSerializers:
         folder = os.path.join('test_data', 'folder_dataset')
         dataset = FolderDatasetReader(folder)
 
-        X, Y = dataset.read(-1, 'train')
+        X, Y = dataset.read()
 
         # check if labels are there
         categories = ['class img', 'class_img_2', 'class_json', 'class_wav']
