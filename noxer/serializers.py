@@ -41,6 +41,10 @@ class ExperimentSerializer():
         fname = self._file_name(obj_name)
         return pc.load(open(fname, 'rb'))
 
+    def __contains__(self, obj_name):
+        fname = self._file_name(obj_name)
+        return os.path.exists(fname)
+
     def savefig(self, ax, name):
         """Save the content of axis / plot under some name."""
         if not os.path.exists(self.fig_folder):
