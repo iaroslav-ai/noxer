@@ -87,11 +87,12 @@ class FolderDatasetReader():
     csv_folder_dataset = "SIMPLE_CLASIF_FOLDERS"
     csv_folder_name = "dataset.csv"
 
-    supported_formats = {'json', 'wav', 'jpg', 'jpeg', 'png'}
+    supported_formats = {'json', 'wav', 'jpg', 'jpeg', 'png', 'mpk'}
 
     image_file = 'image'
     audio_file = 'audio'
     json_file = 'json'
+    mpk_file = 'messagepack'
 
     def __init__(self, root_folder, point_preprocess=None):
         self.root_folder = root_folder
@@ -163,6 +164,14 @@ class FolderDatasetReader():
             info = {"type": self.json_file}
             with open(path, 'r') as f:
                 result = json.load(f)
+            return info, result
+
+        # messagepack files
+        if ext in {'mpk'}:
+            import msgpack
+            info = {"type": self.json_file}
+            with open(path, 'rb') as f:
+                result = msgpack.unpack(f)
             return info, result
 
     def read(self, n=-1, partition="train"):
