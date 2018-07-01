@@ -223,7 +223,10 @@ class SequenceTransformer(BaseEstimator, TransformerMixin):
         return result
 
     def set_params(self, **params):
-        self.base_transformer.set_params(**params)
+        # pluck out the `transformer__` word
+        n = len('transformer__')
+        p = {k[n:]:v for k, v in params.items()}
+        self.transformer.set_params(**p)
         return self
 
 
