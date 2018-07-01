@@ -3,9 +3,98 @@ Feature preprocessing of data, such as expanding
 categorical features to numerical ones.
 """
 
-from sklearn.base import ClassifierMixin, BaseEstimator, TransformerMixin
+from sklearn.base import ClassifierMixin, BaseEstimator, TransformerMixin, MetaEstimatorMixin, clone
 from sklearn.preprocessing import LabelBinarizer, LabelEncoder
+from sklearn.feature_selection.from_model import SelectorMixin, _get_feature_importances
+
 import numpy as np
+
+class SelectFromModelPercentile(BaseEstimator, SelectorMixin, MetaEstimatorMixin):
+    """
+    Extracts a certain percentile of weights based on importance
+    of the features, as measured by some fitted model.
+    """
+    def __init__(self, estimator, percentile=10.0, prefit=False, norm_order=1):
+        self.estimator = estimator
+        self.percentile = percentile
+        self.prefit = prefit
+        self.norm_order = norm_order
+
+    def _get_support_mask(self):
+        # SelectFromModelPercentile can directly call on transform.
+        if self.prefit:
+            estimator = self.estimator
+        elif hasattr(self, 'estimator_'):
+            estimator = self.estimator_
+        else:
+            raise ValueError(
+                'Either fit SelectFromModelPercentile before transform or set "prefit='
+                'True" and pass a fitted estimator to the constructor.')
+        scores = _get_feature_importances(estimator)
+        sz = int(len(scores) * self.percentile)
+        I = scores.argsort()[-sz:]
+
+        threshold = scores*0.0
+        threshold[I] = 1.0
+        threshold = threshold > 0.5
+
+        return threshold
+
+    def fit(self, X, y=None, **fit_params):
+        """Fit the SelectFromModel meta-transformer.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The training input samples.
+
+        y : array-like, shape (n_samples,)
+            The target values (integers that correspond to classes in
+            classification, real numbers in regression).
+
+        **fit_params : Other estimator specific parameters
+
+        Returns
+        -------
+        self : object
+            Returns self.
+        """
+        if self.prefit:
+            raise NotFittedError(
+                "Since 'prefit=True', call transform directly")
+        self.estimator_ = clone(self.estimator)
+        self.estimator_.fit(X, y, **fit_params)
+        return self
+
+
+    def partial_fit(self, X, y=None, **fit_params):
+        """Fit the SelectFromModel meta-transformer only once.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The training input samples.
+
+        y : array-like, shape (n_samples,)
+            The target values (integers that correspond to classes in
+            classification, real numbers in regression).
+
+        **fit_params : Other estimator specific parameters
+
+        Returns
+        -------
+        self : object
+            Returns self.
+        """
+        if self.prefit:
+            raise NotFittedError(
+                "Since 'prefit=True', call transform directly")
+        if not hasattr(self, "estimator_"):
+            self.estimator_ = clone(self.estimator)
+        self.estimator_.partial_fit(X, y, **fit_params)
+        return self
+
+
 
 class ColumnSelector(BaseEstimator, TransformerMixin):
     """Selects a single column with index `key` from some matrix X"""
