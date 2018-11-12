@@ -192,6 +192,12 @@ def distribution_similarity(X_true, X_pred, cross_testing=False):
 
     return score
 
+def conditional_wasserstein_distance(C_true, G_true, C_fake, G_fake, clazz):
+    model = clazz
+
+
+
+
 if __name__ == "__main__":
     # example usage
     X1 = np.random.randn(512,2)

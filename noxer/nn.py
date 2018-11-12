@@ -9,7 +9,7 @@ from abc import abstractmethod
 import numpy as np
 
 from sklearn.base import ClassifierMixin, RegressorMixin, BaseEstimator, TransformerMixin
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.utils import check_X_y
 
 import torch
@@ -104,10 +104,10 @@ class PTLBase(BaseEstimator):
 
         # this creates mixed batches
         trainloader = torch.utils.data.DataLoader(
-            data, batch_size=self.batch_size, shuffle=True
+            data, batch_size=int(self.batch_size), shuffle=True
         )
 
-        for epoch in range(self.epochs):  # loop over the dataset multiple times
+        for epoch in range(int(self.epochs)):  # loop over the dataset multiple times
 
             for i, data in enumerate(trainloader, 0):
                 # get the inputs
@@ -146,7 +146,7 @@ class PTLBase(BaseEstimator):
         if self.net is None:
             raise RuntimeError("The model is not fit. Did you forget to call the fit method on a dataset?")
 
-        X = Variable(torch.FloatTensor(X), volatile=True)
+        X = Variable(torch.FloatTensor(X))
         yp = self.net(X).data.numpy()
         return yp
 
@@ -210,6 +210,65 @@ class PTLClassifierBase(PTLBase, ClassifierMixin):
         return yp
 
 
+class PTLRegressorBase(PTLBase, ClassifierMixin):
+    """
+    A base class for learning regressors with pytorch.
+
+    Parameters
+    ----------
+    See parent classes for corresponding parameters.
+    """
+    def __init__(self, epochs=10, batch_size=256, alpha=0.001,
+                 beta1=0.9, beta2=0.999):
+        super(PTLRegressionBase, self).__init__(
+            epochs, batch_size, alpha, beta1, beta2
+        )
+        self.out_scaler = None
+
+    def fit(self, X, y):
+        """
+        Trains a classifier on provided data.
+
+        Parameters
+        ----------
+
+        X: iterable of size n_samples
+            Representation of dataset.
+
+        y: iterable of size n_samples
+            Representation of classes
+
+        Return
+        ------
+        self
+        """
+        # encode outputs
+        self.out_scaler = StandardScaler().fit(y[:, np.newaxis])
+        yt = self.out_scaler.transform(y[:, np.newaxis])
+        criterion = nn.MSELoss()
+        super(PTLRegressionBase, self).fit(X, yt, criterion)
+        return self
+
+    def predict(self, X):
+        """
+        Estimate output classes.
+
+        Parameters
+        ----------
+        X: iterable of size n_samples
+            Representation of inputs to classify.
+
+        Return
+        ------
+        y: iterable of size n_samples
+            Representation of classes
+        """
+        yp = super(PTLClassifierBase, self).predict(X)
+        yp = self.out_scaler.inverse_transform(yp)
+        yp = yp[:, 0]
+        return yp
+
+
 class FFNNClassificationNN(nn.Module):
     """
     Simple fully connected feed forward NN.
@@ -238,8 +297,8 @@ class FFNNClassificationNN(nn.Module):
             dropout = float(dropout)
 
         layers = []
-        for i in range(n_layers):
-            layers.append(nn.Linear(hsz, n_neurons))
+        for i in range(int(n_layers)):
+            layers.append(nn.Linear(hsz, int(n_neurons)))
             layers.append(nn.LeakyReLU())
             if dropout is not None:
                 if dropout > 0.03:
@@ -249,6 +308,52 @@ class FFNNClassificationNN(nn.Module):
         layers.append(nn.Linear(hsz, ysz))
         layers.append(nn.Softmax(dim=-1))
 
+        self.fc = nn.ModuleList(layers)
+
+    def forward(self, x):
+        for l in self.fc:
+            x = l(x)
+
+        return x
+
+
+class FFNNRegressionNN(nn.Module):
+    """
+    Simple fully connected feed forward NN for regression.
+
+    Parameters
+    ----------
+    xsz: int > 0
+        Size of input vector
+
+    ysz: int > 0
+        Size of output vector
+
+    n_layers: int > 0
+        Number of layers in the neural network
+
+    n_neurons: int > 0
+        Number of neurons in every layer
+    """
+    def __init__(self, xsz, n_neurons, n_layers, dropout=None):
+        super(FFNNRegressionNN, self).__init__()
+        hsz = int(xsz)
+        ysz = 1
+        n_neurons = n_neurons
+        n_layers = n_layers
+        if dropout is not None:
+            dropout = float(dropout)
+
+        layers = []
+        for i in range(int(n_layers)):
+            layers.append(nn.Linear(hsz, int(n_neurons)))
+            layers.append(nn.LeakyReLU())
+            if dropout is not None:
+                if dropout > 0.03:
+                    layers.append(nn.Dropout(p=dropout))
+            hsz = n_neurons
+
+        layers.append(nn.Linear(hsz, ysz))
         self.fc = nn.ModuleList(layers)
 
     def forward(self, x):
@@ -287,6 +392,39 @@ class MLPClassifier(PTLClassifierBase):
         """
         net = FFNNClassificationNN(
             X.shape[-1], len(set(y)), self.n_neurons, self.n_layers,
+            dropout=self.dropout
+        )
+        return net
+
+class MLPRegressor(PTLRegressorBase):
+    """
+    Estimator with Feed Forward Neural Network.
+
+    Parameters
+    ----------
+    For any parameters not listed, see PTLRegressorBase.
+
+    n_layers: int > 0
+        Number of layers in the NN
+
+    n_neurons: int > 0
+        Number of neurons in every layer
+    """
+    def __init__(self, dropout=None, n_layers=1, n_neurons=32, epochs=10, batch_size=256, alpha=0.001,
+                 beta1=0.9, beta2=0.999):
+        super(MLPClassifier, self).__init__(
+            epochs, batch_size, alpha, beta1, beta2
+        )
+        self.n_neurons = int(n_neurons)
+        self.n_layers = int(n_layers)
+        self.dropout = dropout
+
+    def make_architecture(self, X, y):
+        """
+        See PTLBase.make_architecture for explanations.
+        """
+        net = FFNNRegressionNN(
+            X.shape[-1], self.n_neurons, self.n_layers,
             dropout=self.dropout
         )
         return net

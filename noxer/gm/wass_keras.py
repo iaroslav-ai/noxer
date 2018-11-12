@@ -41,7 +41,7 @@ class WeightClip(Constraint):
 def wass_train_loss(y_true, y_pred):
     ''' maximizes score for positive true labels
      and minimizes for negative true'''
-    return K.sum(-y_true * y_pred)
+    return K.sum(y_true * y_pred)
 
 
 def _check_wass_weights(model):
@@ -59,8 +59,10 @@ class WassersteinDiscriminator(BaseEstimator, RegressorMixin):
     For a particular sample, such objective estimates
     how fake the sample looks. The less the value of
     objective - the more realistic the sample looks."""
-    def __init__(self):
+    def __init__(self, epochs=10, verbose=0):
         self.model = None
+        self.epochs = epochs
+        self.verbose = verbose
 
     def make_architecture(self, X, Y):
         """
@@ -69,7 +71,7 @@ class WassersteinDiscriminator(BaseEstimator, RegressorMixin):
         X: n-d array of samples
             Data to train on.
         Y: n-d array of binary values
-            Label for every sample: +1 (real sample), -1 (fake sample)
+            Label for every sample: -1 (real sample), +1 (fake sample)
         """
 
         sh = X[0].shape
@@ -83,7 +85,6 @@ class WassersteinDiscriminator(BaseEstimator, RegressorMixin):
 
         # final output - single score value
         h = Dense(1, W_constraint=WeightClip(), bias_constraint=WeightClip())(h)
-
         self.model = Model(inputs=ip, outputs=h)
         return self
 
@@ -104,8 +105,8 @@ class WassersteinDiscriminator(BaseEstimator, RegressorMixin):
         Y: n-d array of binary values
             Label for every sample: +1 (real sample), -1 (fake sample)
         """
-        for i in range(10):
-            self.model.fit(X, Y, epochs=1)
+        for i in range(self.epochs):
+            self.model.fit(X, Y, epochs=1, verbose=self.verbose)
 
             if monitor is not None:
                 monitor()

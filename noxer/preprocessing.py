@@ -164,3 +164,38 @@ class IntegerEncoder(BaseEstimator, TransformerMixin):
 
     def transform(self, X, y=None):
         return self.encoder.transform(X[:,0])[:, np.newaxis]
+
+
+class FlattenFeatures(BaseEstimator, TransformerMixin):
+    """Flattens the shape of input to the vector"""
+    def fit(self, X, y=None):
+        # create label encoder
+        self.shape = X[0].shape
+        return self
+
+    def transform(self, X, y=None):
+        X = np.reshape(X, (len(X), -1))
+        return X
+
+    def inverse_transform(self, X, y=None):
+        X = np.reshape(X, (-1,) + self.shape)
+        return X
+
+
+class ReshapeFeatures(BaseEstimator, TransformerMixin):
+    """Converts every element in input array to a particular shape."""
+    def __init__(self, shape=None):
+        self.shape = shape
+
+    def fit(self, X, y=None):
+        # create label encoder
+        self.shape_original = X[0].shape
+        return self
+
+    def transform(self, X, y=None):
+        X = np.reshape(X, (len(X),) + self.shape)
+        return X
+
+    def inverse_transform(self, X, y=None):
+        X = np.reshape(X, (len(X),) + self.shape_original)
+        return X
